@@ -1,0 +1,32 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Test and package WinPilot
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Install packager
+        run: python -m pip install 'pyinstaller>=6,<7'
+      - name: Build portable EXE
+        run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name WinPilot app.py
+      - name: Upload portable EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: WinPilot-Windows
+          path: dist/WinPilot.exe
+          if-no-files-found: error
