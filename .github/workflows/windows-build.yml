@@ -7,10 +7,10 @@ on:
 
 jobs:
   build:
-    name: Test and package WinPilot
+    name: Test, package and release WinPilot
     runs-on: windows-latest
     permissions:
-      contents: read
+      contents: write  # Needed to create GitHub Releases
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -18,15 +18,32 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - name: Unit tests
+      - name: Unit tests and GUI smoke test
         run: python -m unittest discover -s tests -v
       - name: Install packager
         run: python -m pip install 'pyinstaller>=6,<7'
       - name: Build portable EXE
         run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name WinPilot app.py
-      - name: Upload portable EXE
+      - name: Upload portable EXE as workflow artifact
         uses: actions/upload-artifact@v4
         with:
           name: WinPilot-Windows
           path: dist/WinPilot.exe
           if-no-files-found: error
+      - name: Publish EXE to GitHub Releases
+        if: github.ref == 'refs/heads/main'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: v1.0.1
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not (Test-Path 'dist/WinPilot.exe')) { throw 'WinPilot.exe was not built' }
+          $releases = @(gh release list --repo $env:GITHUB_REPOSITORY --json tagName --limit 100 | ConvertFrom-Json)
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to list GitHub Releases' }
+          if ($releases | Where-Object { $_.tagName -eq $env:RELEASE_TAG }) {
+            gh release upload $env:RELEASE_TAG 'dist/WinPilot.exe#WinPilot.exe' --clobber --repo $env:GITHUB_REPOSITORY
+          } else {
+            gh release create $env:RELEASE_TAG 'dist/WinPilot.exe#WinPilot.exe' --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title 'WinPilot v1.0.1' --notes 'Windows 11 optimizer. Fixed GUI startup crash and added GUI smoke tests. Download WinPilot.exe below.'
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to publish WinPilot.exe to Releases' }

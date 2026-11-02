@@ -68,9 +68,10 @@ class WinPilotApp:
               foreground=[('readonly', FG)])
 
     def _label(self, parent, txt, size=11, color=FG, bold=False, **kw):
+        # Allow callers to override Tk options without duplicate keywords.
         return tk.Label(parent, text=txt, bg=kw.pop('bg', BG), fg=color,
                         font=('Segoe UI Semibold' if bold else 'Segoe UI', size),
-                        justify='left', anchor='w', **kw)
+                        justify=kw.pop('justify', 'left'), anchor=kw.pop('anchor', 'w'), **kw)
 
     def _button(self, parent, text, action, primary=False, **kw):
         bg = ACCENT if primary else PANEL_2
@@ -107,7 +108,7 @@ class WinPilotApp:
                           command=lambda k=key: self.show_page(k))
             b.pack(fill='x', padx=9, pady=2)
             self.menu_buttons[key] = b
-        self._label(self.sidebar, 'v1.0.0  •  Без телеметрии', 9, MUTED,
+        self._label(self.sidebar, 'v1.0.1  •  Без телеметрии', 9, MUTED,
                     bg=PANEL).pack(side='bottom', anchor='w', padx=19, pady=24)
 
     def _heading(self, parent, title, desc) -> None:
