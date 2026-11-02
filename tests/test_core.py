@@ -30,7 +30,7 @@ class CleanupTests(unittest.TestCase):
         recent = self.write('current.log', old=False)
         candidates, summary = core.scan_temp(self.root)
         self.assertEqual(summary.files, 1)
-        self.assertIn(old, candidates)
+        self.assertTrue(any(candidate.samefile(old) for candidate in candidates))
         self.assertEqual(summary.bytes, len('hello, WinPilot'))
         done = core.clean_temp(self.root)
         self.assertEqual(done.files, 1)
